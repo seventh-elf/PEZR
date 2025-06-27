@@ -38,7 +38,7 @@ void onInit(CBlob@ this)
 	const u16 day_number = rules.get_u16("day_number");
 	const u16 player_count = rules.get_u8("survivor player count");
 	const u32 difficulty = (day_number * 5) + (player_count * 2);
-	const u32 probability = 450 - Maths::Min(difficulty, 450);
+	const u32 probability = 210 - Maths::Min(difficulty, 210);
 	Random rand(this.getNetworkID() + day_number + player_count);
 	if (rand.NextRanged(probability) == 0) this.Tag("jerry");
 	
