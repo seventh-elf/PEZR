@@ -2,12 +2,18 @@
 
 #define CLIENT_ONLY
 
+// A global variable to remember what kind of music is currently playing.
+// We initialize it to -1 to signify "no state yet".
+int currentMusicState = -1;
+
 enum GameMusicTags
 {
 	world_ambient,
 	world_ambient_underground,
 	world_ambient_mountain,
 	world_ambient_night,
+	world_custom_combat, 
+	world_custom_peaceful, 
 	world_intro,
 	world_home,
 	world_calm,
@@ -20,55 +26,49 @@ enum GameMusicTags
 void onInit(CRules@ this)
 {
 	CMixer@ mixer = getMixer();
-	if (mixer is null) return; //prevents aids on server
+	if (mixer is null) return;
 	
 	AddGameMusic(this, mixer);
 }
 
+// Add an onRestart function to reset our state tracker between rounds.
+void onRestart(CRules@ this)
+{
+    currentMusicState = -1;
+}
+
 void onTick(CRules@ this)
 {
+	// This check makes the logic run less frequently to save performance. It's good to keep.
 	if (getGameTime() % 90 != 0) return;
 
 	CMixer@ mixer = getMixer();
-	if (mixer is null) return; //prevents aids on server
+	if (mixer is null) return;
 
-	//we are only doing ambience ATM, so we can always leave it on
 	GameMusicLogic(this, mixer);
-
-	/*if (s_soundon != 0 && s_musicvolume > 0.0f)
-	{
-		GameMusicLogic(this, mixer);
-	}
-	else
-	{
-		mixer.FadeOutAll(0.0f, 2.0f);
-	}*/
 }
 
 //sound references with tag
 void AddGameMusic(CRules@ this, CMixer@ mixer)
 {
 	mixer.ResetMixer();
-	mixer.AddTrack("Sounds/Music/ambient_forest.ogg", world_ambient);
-	mixer.AddTrack("Sounds/Music/ambient_mountain.ogg", world_ambient_mountain);
-	mixer.AddTrack("Sounds/Music/ambient_cavern.ogg", world_ambient_underground);
-	mixer.AddTrack("Sounds/Music/ambient_night.ogg", world_ambient_night);
-	/*mixer.AddTrack("Sounds/Music/KAGWorldIntroShortA.ogg", world_intro);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-1a.ogg", world_home);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-2a.ogg", world_home);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-3a.ogg", world_home);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-4a.ogg", world_home);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-5a.ogg", world_calm);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-6a.ogg", world_calm);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-7a.ogg", world_calm);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-8a.ogg", world_calm);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-9a.ogg", world_home);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-10a.ogg", world_battle);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-11a.ogg", world_battle);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-12a.ogg", world_battle);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-13+Intro.ogg", world_battle_2);
-	mixer.AddTrack("Sounds/Music/KAGWorld1-14.ogg", world_battle_2);
-	mixer.AddTrack("Sounds/Music/KAGWorldQuickOut.ogg", world_quick_out);*/
+	
+	// Combat songs
+	mixer.AddTrack("Soundtrack/combat/Craftsdwarfship.ogg", world_custom_combat);
+	mixer.AddTrack("Soundtrack/combat/DeathSpiral.ogg", world_custom_combat);
+	mixer.AddTrack("Soundtrack/combat/DrinkAndIndustry.ogg", world_custom_combat);
+	mixer.AddTrack("Soundtrack/combat/ExpansiveCavern.ogg", world_custom_combat);
+	mixer.AddTrack("Soundtrack/combat/FirstYear.ogg", world_custom_combat);
+	mixer.AddTrack("Soundtrack/combat/ForgottenBeast.ogg", world_custom_combat);
+	mixer.AddTrack("Soundtrack/combat/Koganusan.ogg", world_custom_combat);
+	mixer.AddTrack("Soundtrack/combat/StrangeMoods.ogg", world_custom_combat);
+	mixer.AddTrack("Soundtrack/combat/VileForceOfDarkness.ogg", world_custom_combat);
+	// Peaceful songs
+	mixer.AddTrack("Soundtrack/peaceful/AnotherYear.ogg", world_custom_peaceful);
+	mixer.AddTrack("Soundtrack/peaceful/HillDwarf.ogg", world_custom_peaceful);
+	mixer.AddTrack("Soundtrack/peaceful/Mountainhome.ogg", world_custom_peaceful);
+	mixer.AddTrack("Soundtrack/peaceful/StrikeTheEarth.ogg", world_custom_peaceful);
+	mixer.AddTrack("Soundtrack/peaceful/WinterEntombsYou.ogg", world_custom_peaceful);
 }
 
 void GameMusicLogic(CRules@ this, CMixer@ mixer)
@@ -82,39 +82,62 @@ void GameMusicLogic(CRules@ this, CMixer@ mixer)
 		mixer.FadeOutAll(0.0f, 6.0f);
 		return;
 	}
-	Vec2f pos = blob.getPosition();
-
+	
+	// Get game state variables
 	const u16 undead_count = this.get_u16("undead count");
-	const bool isNight = map.getDayTime() > 0.85f || map.getDayTime() < 0.1f;
-	const bool isTwilight = map.getDayTime() > 0.75f && map.getDayTime() < 0.85f;
-	const bool cantSeeSky = map.rayCastSolid(pos, Vec2f(pos.x, pos.y - 160.0f));
-	const bool isUnderground = map.getLandYAtX(pos.x / map.tilesize) * map.tilesize < pos.y;
-	if (isUnderground && cantSeeSky)
+	
+	// --- NEW STATE-AWARE MUSIC LOGIC ---
+
+	// 1. Determine what the music SHOULD be right now.
+	int desiredMusicState;
+	if (undead_count > 8)
 	{
-		changeMusic(mixer, world_ambient_underground, 2.0f, 4.0f);
-	}
-	else if (pos.y < 312.0f)
-	{
-		changeMusic(mixer, world_ambient_mountain, 2.0f, 4.0f);
-	}
-	else if (undead_count <= 8 && !isTwilight && isNight)
-	{
-		//if (isNight)
-		{
-			changeMusic(mixer, world_ambient_night, 2.0f, 4.0f);
-		}
-		/*else
-		{
-			changeMusic(mixer, world_ambient, 2.0f, 4.0f);
-		}*/
+		desiredMusicState = world_custom_combat;
 	}
 	else
 	{
-		mixer.FadeOutAll(0.0f, 6.0f);
+		desiredMusicState = world_custom_peaceful;
+	}
+
+	// 2. Check if the desired state is DIFFERENT from the current state.
+	if (desiredMusicState != currentMusicState)
+	{
+		// A TRANSITION is happening!
+		print("Music state changing from " + currentMusicState + " to " + desiredMusicState);
+
+		if (desiredMusicState == world_custom_peaceful)
+		{
+			// --- THIS IS YOUR REQUESTED CHANGE ---
+			// We are going from COMBAT to PEACEFUL.
+			changeMusic(mixer, world_custom_peaceful, 5.0f, 5.0f);
+		}
+		else // This means desiredMusicState is world_custom_combat
+		{
+			// We are going from PEACEFUL to COMBAT.
+			changeMusic(mixer, world_custom_combat, 2.0f, 3.0f);
+		}
+		
+		// 3. Update the tracker to remember the new state for the next check.
+		currentMusicState = desiredMusicState;
+	}
+	else
+	{
+		// NO state change. This is a "sustained" state.
+		// This block handles starting a new song if the previous one finished.
+		if (currentMusicState == world_custom_combat)
+		{
+			// Sustain combat music with fast fades between tracks.
+			changeMusic(mixer, world_custom_combat, 3.0f, 3.0f);
+		}
+		else if (currentMusicState == world_custom_peaceful)
+		{
+			// Sustain peaceful music with slow fades between tracks.
+			changeMusic(mixer, world_custom_peaceful, 5.0f, 5.0f);
+		}
 	}
 }
 
-// handle fadeouts / fadeins dynamically
+// This helper function is perfect as-is.
 void changeMusic(CMixer@ mixer, int nextTrack, f32 fadeoutTime = 1.6f, f32 fadeinTime = 1.6f)
 {
 	if (!mixer.isPlaying(nextTrack))
