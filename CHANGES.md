@@ -7,4 +7,4 @@ Soundtrack Implemented
   - Combat Music
   - Peaceful Music
 Sprites Redesign
-  - Purple Players (This may change to allow full color spectrum by choice of player)
+  - Zombies / Enemies Redesigned. Zombie outlines softer, sedgewick recolor, jerry recolor
