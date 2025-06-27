@@ -4,6 +4,7 @@
 #include "Zombie_GlobalMessagesCommon.as";
 #include "Zombie_WarnsCommon.as";
 #include "MapSaver.as";
+#include "WeatherSystem.as";
 
 //Use ' !list ' in game to view the commands list.
 
@@ -29,6 +30,7 @@ string CommandsList()
 	"!structure [index] : loads a structure from cfg. no index = random\n" +
 	"!savestructure : saves a structure at the player's position\n" +
 	"!savemap [save name] : saves the current map to your save slot\n" +
+	"!weather [level] : force the weather to a specific level (0-3)\n" +
 	"!loadsave [save name] : loads a saved map from config";
 }
 
@@ -152,6 +154,19 @@ bool DeveloperCommands(CRules@ this, string[]@ tokens, CPlayer@ player, CBlob@ b
 			}
 		}
 	}
+    else if (tokens[0] == "!weather")
+    {
+        if (tokens.length < 2)
+        {
+            server_SendGlobalMessage(this, "Usage: !weather [level 0-3]", 5, color_white.color, player);
+            return false;
+        }
+
+        int newLevel = parseInt(tokens[1]);
+        ChangeRainLevel(this, newLevel);
+        server_SendGlobalMessage(this, "Weather level forced to " + Maths::Clamp(newLevel, 0, 3), 5, color_white.color, player);
+        return false;
+    }
 	else if (tokens[0] == "!time" && tokens.length > 1)
 	{
 		getMap().SetDayTime(parseFloat(tokens[1]));
