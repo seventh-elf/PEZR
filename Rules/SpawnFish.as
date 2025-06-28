@@ -53,7 +53,7 @@ void onTick(CRules@ this)
 	}
 	else //spawn from nowhere
 	{
-		f32 x = (f32((getGameTime() * 997) % map.tilemapwidth) + 0.5f) * map.tilesize;
+		f32 x = (f32((getGameTime() * 997) % (map.tilemapwidth + 1)) + 0.5f) * map.tilesize;
 
 		Vec2f top = Vec2f(x, map.tilesize);
 		Vec2f bottom = Vec2f(x, map.tilemapheight * map.tilesize);

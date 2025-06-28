@@ -70,6 +70,7 @@ namespace CMap
 	};
 }
 
+
 bool isTileIronOre(const u16&in tile)
 {
 	return tile >= CMap::tile_ironore && tile <= CMap::tile_ironore_f;
