@@ -4,9 +4,9 @@
 void onTick(CBlob@ this)
 {
     CRules@ rules = getRules();
-    bool red_mode = false; // rules.get_bool("cl_debug_red_rain");
     float wind_speed = rules.get_f32("s_current_wind");
-
-    CreateManagedRain(this, 20, red_mode, wind_speed);
+    float synchronized_wind_angle = rules.get_f32("s_rain_wind_angle");
+    
+    CreateManagedRain(this, 20, false, wind_speed, synchronized_wind_angle, 5.0f);
     UpdateManagedRain(this);
 }
